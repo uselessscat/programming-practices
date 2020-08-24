@@ -1,0 +1,5 @@
+# external
+lib/
+
+# executables
+love/
