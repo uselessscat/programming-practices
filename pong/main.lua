@@ -3,6 +3,7 @@ push = require 'lib/ulydev/push/push'
 Class = require 'lib/vrld/hump/class'
 
 require 'Paddle'
+require 'Ball'
 
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
@@ -38,11 +39,7 @@ function initializeVariables()
     paddleOne = Paddle(10, 20, 5, 20)
     paddleTwo = Paddle(VIRTUAL_WIDTH - 15, VIRTUAL_HEIGHT - 40, 5, 20)
 
-    ballX = VIRTUAL_WIDTH / 2 - 2
-    ballY = VIRTUAL_HEIGHT / 2 - 2
-
-    ballDX = math.random(2) == 1 and -100 or 100
-    ballDY = math.random(-50, 50)
+    ball = Ball(VIRTUAL_WIDTH / 2 - 2, VIRTUAL_HEIGHT / 2 - 2, 5, 5)
 end
 
 function love.keypressed(key)
@@ -70,14 +67,11 @@ function love.update(dt)
     updatePaddle('up', 'down', paddleTwo, dt)
 
     if gameState == 'play' then
-        ballX = ballX + ballDX * dt
-        ballY = ballY + ballDY * dt
+        ball:update(dt)
     end
 end
 
 function updatePaddle(keyUp, keyDown, paddle, dt)
-    paddle:update(dt)
-
     if love.keyboard.isDown(keyUp) then
         paddle.dy = -PADDLE_SPEED
     elseif love.keyboard.isDown(keyDown) then
@@ -85,6 +79,8 @@ function updatePaddle(keyUp, keyDown, paddle, dt)
     else
         paddle.dy = 0
     end
+
+    paddle:update(dt)
 end
 
 function love.draw(dt)
@@ -102,7 +98,7 @@ function love.draw(dt)
     end
 
     -- draw the ball
-    love.graphics.rectangle('fill', ballX, ballY, 5, 5)
+    ball:draw()
 
     -- draw the paddles
     paddleOne:render()
