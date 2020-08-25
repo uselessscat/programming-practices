@@ -1,5 +1,8 @@
 -- from github
 push = require 'lib/ulydev/push/push'
+Class = require 'lib/vrld/hump/class'
+
+require 'Paddle'
 
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
@@ -32,8 +35,8 @@ function initializeVariables()
     playerOneScore = 0
     playerTwoScore = 0
 
-    playerOnePos = 20
-    playerTwoPos = VIRTUAL_HEIGHT - 40
+    paddleOne = Paddle(10, 20, 5, 20)
+    paddleTwo = Paddle(VIRTUAL_WIDTH - 15, VIRTUAL_HEIGHT - 40, 5, 20)
 
     ballX = VIRTUAL_WIDTH / 2 - 2
     ballY = VIRTUAL_HEIGHT / 2 - 2
@@ -63,8 +66,8 @@ function love.update(dt)
     time = time + dt
     n = n + 1
 
-    playerOnePos = getUpdatedPaddlePosition('w', 's', playerOnePos, dt)
-    playerTwoPos = getUpdatedPaddlePosition('up', 'down', playerTwoPos, dt)
+    updatePaddle('w', 's', paddleOne, dt)
+    updatePaddle('up', 'down', paddleTwo, dt)
 
     if gameState == 'play' then
         ballX = ballX + ballDX * dt
@@ -72,13 +75,15 @@ function love.update(dt)
     end
 end
 
-function getUpdatedPaddlePosition(keyUp, keyDown, actualPosition, dt)
+function updatePaddle(keyUp, keyDown, paddle, dt)
+    paddle:update(dt)
+
     if love.keyboard.isDown(keyUp) then
-        return math.max(0, actualPosition - PADDLE_SPEED * dt)
+        paddle.dy = -PADDLE_SPEED
     elseif love.keyboard.isDown(keyDown) then
-        return math.min(VIRTUAL_HEIGHT - 20, actualPosition + PADDLE_SPEED * dt)
+        paddle.dy = PADDLE_SPEED
     else
-        return actualPosition
+        paddle.dy = 0
     end
 end
 
@@ -100,8 +105,8 @@ function love.draw(dt)
     love.graphics.rectangle('fill', ballX, ballY, 5, 5)
 
     -- draw the paddles
-    love.graphics.rectangle('fill', 10, playerOnePos, 5, 20)
-    love.graphics.rectangle('fill', VIRTUAL_WIDTH - 15, playerTwoPos, 5, 20)
+    paddleOne:render()
+    paddleTwo:render()
 
     -- print the score in background
     love.graphics.setFont(scoreFont)
