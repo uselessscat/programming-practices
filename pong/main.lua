@@ -34,7 +34,7 @@ function love.load()
     push:setupScreen(VIRTUAL_WIDTH, VIRTUAL_HEIGHT, WINDOW_WIDTH, WINDOW_HEIGHT, {
         fullscreen = false,
         vsync = true,
-        resizable = false
+        resizable = true
     })
 
     initializeVariables()
@@ -54,6 +54,10 @@ function initializeVariables()
     playerOneScore = 0
     playerTwoScore = 0
     playerWin = 0
+end
+
+function love.resize(w, h)
+    push:resize(w, h)
 end
 
 function love.keypressed(key)
