@@ -209,7 +209,7 @@ function love.draw(dt)
     paddleTwo:render()
 
     printScore()
-    printInformation()
+    -- printInformation()
     
     push:apply('end')
 end
