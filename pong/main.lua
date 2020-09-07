@@ -54,6 +54,8 @@ function initializeVariables()
     playerOneScore = 0
     playerTwoScore = 0
     playerWin = 0
+
+    cpuPlaying = 1
 end
 
 function love.resize(w, h)
@@ -71,6 +73,8 @@ function love.keypressed(key)
         elseif gameState == 'serve' then
             gameState = 'play'
         end
+    elseif key == "rctrl" then
+        debug.debug()
     end
 end
 
@@ -87,25 +91,45 @@ function love.update(dt)
     n = n + 1
     
     if gameState == 'play' then
+        
         updatePaddle('w', 's', paddleOne, dt)
-        updatePaddle('up', 'down', paddleTwo, dt)
+        
+        if cpuPlaying > 0 then
+            paddleTwo.dy = botAction(dt)
+            
+            paddleTwo:update(dt)
+        else
+            updatePaddle('up', 'down', paddleTwo, dt)
+        end
+        
+        -- update ball after paddles
+        ball:update(dt)
 
-        if ball:collides(paddleOne) or ball:collides(paddleTwo) then
+        -- check collision with paddles
+        if ball:collides(paddleOne) then
+            ball.x = (paddleOne.x + paddleOne.width) + ((paddleOne.x + paddleOne.width) - ball.x)
             ball.dx = -ball.dx
+            
+            sounds['paddle']:play()
+        end
 
+        if ball:collides(paddleTwo) then
+            ball.x = paddleTwo.x - ball.width - ((ball.x + ball.width) - paddleTwo.x)
+            ball.dx = -ball.dx
+            
             sounds['paddle']:play()
         end
 
         if ball.y <= 0 then
+            ball.y = math.abs(ball.y)
             ball.dy = -ball.dy
-            ball.y = 0
 
             sounds['wall']:play()
         end
 
         if ball.y >= VIRTUAL_HEIGHT - ball.height then
+            ball.y = VIRTUAL_HEIGHT - ball.height - (ball.y + ball.height - VIRTUAL_HEIGHT)
             ball.dy = -ball.dy
-            ball.y = VIRTUAL_HEIGHT - ball.height
 
             sounds['wall']:play()
         end
@@ -139,8 +163,6 @@ function love.update(dt)
                 ball:ensureCorrectServing(playerServing)
             end
         end
-
-        ball:update(dt)
     end
 end
 
@@ -198,6 +220,44 @@ function printScore()
     love.graphics.print(playerOneScore, VIRTUAL_WIDTH / 2 - 50, VIRTUAL_HEIGHT / 3)
     love.graphics.print(playerTwoScore, VIRTUAL_WIDTH / 2 + 30, VIRTUAL_HEIGHT / 3)
 end
+posy = 0
+tim = 0
+function botAction(dt)
+    timeTo = 0
+    pos = 0
+
+    if ball.dx > 0 then
+        timeTo = (paddleTwo.x - ball.x + ball.width) / ball.dx
+    else
+        absdx = math.abs(ball.dx)
+        -- the distance ball-paddle plus paddle-paddle 
+        timeTo = ((ball.x - (paddleOne.x + paddleOne.width)) + (paddleTwo.x - (paddleOne.x + paddleOne.width))) / absdx
+    end
+
+    -- the collision position calculated 
+    pos = math.abs(ball.y + ball.height / 2 + ball.dy * timeTo)
+    -- substract the ball height to compensate bounces with bottom border
+    pos = pos - math.floor(pos / VIRTUAL_HEIGHT) * ball.height
+
+    -- fix position if is greater than screen
+    if math.floor(pos / VIRTUAL_HEIGHT) % 2 == 0 then
+        pos = pos % VIRTUAL_HEIGHT
+    else
+        pos = VIRTUAL_HEIGHT - pos % VIRTUAL_HEIGHT
+    end
+
+    posy = pos
+    tim = timeTo
+
+    paddlePos = paddleTwo.y + paddleTwo.height / 2
+    absDiff = math.abs(paddlePos - pos)
+
+    if absDiff > PADDLE_SPEED * dt then
+        return PADDLE_SPEED * (pos - paddlePos) / absDiff
+    else
+        return 0
+    end
+end
 
 n = 0
 gdt = 0
@@ -217,4 +277,6 @@ function printInformation()
     end
 
     love.graphics.print("FPS " .. tostring(1/fixed_gdt), 0, 40)
+    love.graphics.print("POSY " .. tostring(posy), 0, 60)
+    love.graphics.print("TIM " .. tostring(tim), 0, 70)
 end
