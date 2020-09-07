@@ -220,40 +220,55 @@ function printScore()
     love.graphics.print(playerOneScore, VIRTUAL_WIDTH / 2 - 50, VIRTUAL_HEIGHT / 3)
     love.graphics.print(playerTwoScore, VIRTUAL_WIDTH / 2 + 30, VIRTUAL_HEIGHT / 3)
 end
+
 posy = 0
 tim = 0
 function botAction(dt)
+    -- this happens every frame, we can improve to happens less often
     timeTo = 0
     pos = 0
 
+    -- calculate the time-to-collision
     if ball.dx > 0 then
-        timeTo = (paddleTwo.x - ball.x + ball.width) / ball.dx
+        timeTo = (paddleTwo.x - (ball.x + ball.width)) / ball.dx
     else
         absdx = math.abs(ball.dx)
-        -- the distance ball-paddle plus paddle-paddle 
-        timeTo = ((ball.x - (paddleOne.x + paddleOne.width)) + (paddleTwo.x - (paddleOne.x + paddleOne.width))) / absdx
+        -- the distance ball-paddle plus paddle-paddle
+        timeToPaddleOne = (ball.x - (paddleOne.x + paddleOne.width)) / absdx
+        timeToPaddelTwo = (paddleTwo.x - ball.width - (paddleOne.x + paddleOne.width)) / absdx
+        timeTo = timeToPaddleOne + timeToPaddelTwo
     end
 
     -- the collision position calculated 
-    pos = math.abs(ball.y + ball.height / 2 + ball.dy * timeTo)
-    -- substract the ball height to compensate bounces with bottom border
-    pos = pos - math.floor(pos / VIRTUAL_HEIGHT) * ball.height
+    pos = math.abs(ball.y + ball.dy * timeTo)
+
+    ADJUSTED_VHEIGHT = VIRTUAL_HEIGHT - ball.height
 
     -- fix position if is greater than screen
-    if math.floor(pos / VIRTUAL_HEIGHT) % 2 == 0 then
-        pos = pos % VIRTUAL_HEIGHT
+    if math.floor(pos / ADJUSTED_VHEIGHT) % 2 == 0 then
+        pos = pos % ADJUSTED_VHEIGHT
     else
-        pos = VIRTUAL_HEIGHT - pos % VIRTUAL_HEIGHT
+        pos = ADJUSTED_VHEIGHT - pos % ADJUSTED_VHEIGHT
     end
 
+    -- debug
     posy = pos
     tim = timeTo
-
+    
+    -- adjust the ball pos to the middle
+    pos = pos + ball.height / 2
     paddlePos = paddleTwo.y + paddleTwo.height / 2
     absDiff = math.abs(paddlePos - pos)
+    dir = -1
 
+    -- set paddle direction
+    if paddlePos - pos < 0 then
+        dir = 1
+    end
+    
+    -- if the difference of distance is greater than the pladdle move in the next frame, move
     if absDiff > PADDLE_SPEED * dt then
-        return PADDLE_SPEED * (pos - paddlePos) / absDiff
+        return PADDLE_SPEED * dir
     else
         return 0
     end

@@ -5,7 +5,7 @@ local function reset_ball(ball)
     ball.y = ball.initial_y
 
     ball.dx = math.random(2) == 1 and -100 or 100
-    ball.dy = math.random(-50, 50)
+    ball.dy = math.random(-200, 200)
 end
 
 function Ball:init(x, y, width, height)
