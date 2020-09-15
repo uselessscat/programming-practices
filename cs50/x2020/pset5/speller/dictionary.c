@@ -1,7 +1,8 @@
 // Implements a dictionary's functionality
+#pragma warning(disable : 4996)
+#include <time.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <stdint.h>
 #include <ctype.h>
 
 #include <string.h>
@@ -9,196 +10,224 @@
 
 #include "dictionary.h"
 
+#define INITIAL_ELEMENTS 8
+
 // Represents a node in a hash table
 typedef struct node
 {
-    char word[LENGTH + 1];
-    struct node *next;
+	unsigned int len;
+	unsigned int hash;
+	char word[LENGTH + 1];
 }
 node;
 
-// Number of buckets in hash table
-const unsigned int N = 214500;
-unsigned int count = 0;
-unsigned int collisions = 0;
+typedef struct HashTable
+{
+	unsigned int seed;
+	unsigned int count;
+	// Number of buckets in hash table
+	unsigned int capacity;
 
-// Hash table
-node *table[N];
+	// pointer to array of node structs
+	node(*elements)[];
+}
+hashtable;
+
+hashtable* table;
+
+unsigned int generateSeed()
+{
+	srand((unsigned int)time(NULL));
+
+	return rand();
+}
+
+bool initHashTable(unsigned int initialCapacity)
+{
+	table = (hashtable*)malloc(sizeof(hashtable));
+
+	if (table)
+	{
+		table->seed = generateSeed();
+		table->count = 0;
+		table->capacity = initialCapacity;
+
+		// casting to a pointer -> nodes[]
+		table->elements = (node(*)[]) calloc(initialCapacity, sizeof(node));
+
+		if (table->elements == NULL)
+		{
+			return false;
+		}
+
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
 
 // Returns true if word is in dictionary else false
-bool check(const char *word)
+bool check(const char* word)
 {
-    char word_l[LENGTH + 1];
+	// in order to check i have to convert to lower case
+	char word_l[LENGTH + 1];
 
-    strcpy(word_l, word);
+	strcpy_s(word_l, sizeof(word_l), word);
 
-    for(int i = 0; word_l[i]; i++){
-        word_l[i] = tolower(word_l[i]);
-    }
+	for (int i = 0; word_l[i]; i++)
+	{
+		word_l[i] = tolower(word_l[i]);
+	}
 
-    unsigned int hashed = hash(word_l);
-    //printf("----%s %d\n", word, hashed);
+	// then hash and check
+	unsigned int hashed = hash(word_l) % (table->capacity);
 
-    if (table[hashed] != NULL && strcmp(word_l, table[hashed]->word) == 0){
-        //printf("CHECK TRUE");
-        return true;
-    }
+	if (strcmp(word_l, (*table->elements + hashed)->word) == 0)
+	{
+		return true;
+	}
 
-    return false;
+	return false;
 }
 
-uint32_t rotl32( uint32_t x, int8_t r )
+inline unsigned int rotl32(unsigned int x, unsigned char r)
 {
-    return (x << r) | (x >> (32 - r));
-}
-
-uint32_t getblock32( const uint32_t * p, int i )
-{
-    return p[i];
+	return (x << r) | (x >> (32 - r));
 }
 
 // Hashes word to a number
-unsigned int hash(const char *word)
+unsigned int hash(const char* data)
 {
-    // https://softwareengineering.stackexchange.com/a/145633/258205
-    // I'm porting MurmurHash 3 to C from https://github.com/aappleby/smhasher/blob/master/src/MurmurHash3.cpp#L94
-    const uint32_t seed = 1;
-    const uint32_t len = strlen(word);
-    const uint8_t *data = (const uint8_t*) word;
-    const int nblocks = len / 4;
+	// https://softwareengineering.stackexchange.com/a/145633/258205
+	// I'm using MurmurHash 3 from https://github.com/aappleby/smhasher/blob/master/src/MurmurHash3.cpp#L94
 
-    uint32_t h1 = seed;
+	unsigned int len = strlen(data);
+	int nblocks = len / 4;
 
-    const uint32_t c1 = 0xcc9e2d51;
-    const uint32_t c2 = 0x1b873593;
+	unsigned int h1 = table->seed;
 
-    // body
+	unsigned int c1 = 0xcc9e2d51;
+	unsigned int c2 = 0x1b873593;
 
-    const uint32_t * blocks = (const uint32_t *)(data + nblocks*4);
+	// body
+	// point to the end 4 bytes block
+	unsigned int* blocks = (unsigned int*)(data + nblocks * 4);
 
-    for(int i = -nblocks; i; i++)
-    {
-        uint32_t k1 = getblock32(blocks, i);
+	// iterate from first block using negative indexes
+	for (int i = -nblocks; i; i++)
+	{
+		unsigned int k1 = blocks[i];
 
-        k1 *= c1;
-        k1 = rotl32(k1,15);
-        k1 *= c2;
+		k1 *= c1;
+		k1 = rotl32(k1, 15);
+		k1 *= c2;
 
-        h1 ^= k1;
-        h1 = rotl32(h1,13);
-        h1 = h1*5+0xe6546b64;
-    }
+		h1 ^= k1;
+		h1 = rotl32(h1, 13);
+		h1 = h1 * 5 + 0xe6546b64;
+	}
 
-    // tail
+	// tail
+	unsigned char* tail = (unsigned char*)(data + nblocks * 4);
 
-    const unsigned char *tail = (const unsigned char*)(data + nblocks*4);
+	unsigned int k1 = 0;
 
-    uint32_t k1 = 0;
+	switch (len & 3)
+	{
+	case 3:
+		k1 ^= tail[2] << 16;
+	case 2:
+		k1 ^= tail[1] << 8;
+	case 1:
+		k1 ^= tail[0];
+		k1 *= c1;
+		k1 = rotl32(k1, 15);
+		k1 *= c2;
+		h1 ^= k1;
+	};
 
-    switch(len & 3)
-    {
-    case 3: k1 ^= tail[2] << 16;
-    case 2: k1 ^= tail[1] << 8;
-    case 1: k1 ^= tail[0];
-          k1 *= c1; k1 = rotl32(k1,15); k1 *= c2; h1 ^= k1;
-    };
+	// finalization
+	h1 ^= len;
 
-    //----------
-    // finalization
+	h1 ^= h1 >> 16;
+	h1 *= 0x85ebca6b;
+	h1 ^= h1 >> 13;
+	h1 *= 0xc2b2ae35;
+	h1 ^= h1 >> 16;
 
-    h1 ^= len;
-
-    h1 ^= h1 >> 16;
-    h1 *= 0x85ebca6b;
-    h1 ^= h1 >> 13;
-    h1 *= 0xc2b2ae35;
-    h1 ^= h1 >> 16;
-
-    // TODO:
-    return h1 % (N - 1);
+	return h1;
 }
 
-bool add(const char *value)
+bool add(const char* value, int lenght)
 {
-    char word[LENGTH + 1];
-    strcpy(word, value);
+	unsigned int hashval = hash(value) % (table->capacity);
 
-    for(int i = 0; word[i]; i++){
-        word[i] = tolower(word[i]);
-    }
+	strcpy((*table->elements + hashval)->word, value);
+	(*table->elements + hashval)->len = lenght;
+	table->count += 1;
 
-    unsigned int hashval = hash(word);
-
-    if (table[hashval] != NULL)
-    {
-        collisions++;
-        free(table[hashval]);
-    }
-
-    table[hashval] = (node*) malloc(sizeof(node));
-
-    // dest, source wtf
-    strcpy(table[hashval]->word, word);
-    count += 1;
-    // printf("---%s %d\n", value, hashval);
-    return true;
+	return true;
 }
 
 // Loads dictionary into memory, returning true if successful else false
-bool load(const char *dictionary)
+bool load(const char* dictionary)
 {
-    FILE *file = fopen(dictionary, "r");
+	FILE* file = fopen(dictionary, "r");
 
-    if (file != NULL)
-    {
-        char line[LENGTH + 1];
-        unsigned int position = ftell(file); // starts at 0
+	if (file != NULL)
+	{
+		if (!initHashTable(INITIAL_ELEMENTS))
+		{
+			fclose(file);
+			unload();
 
-        while (fgets(line, sizeof(line), file)) {
-            // fgets adds \n to string ends :C
-            int len = ftell(file) - position;
-            line[len - 1] = 0x0;
+			return false;
+		}
 
-            // if cant add a line to the dictionary then free resources and return false
-            if(!add(line))
-            {
-                // free resources
-                unload();
-                fclose(file);
+		char line[LENGTH + 1];
 
-                return false;
-            }
+		// read the dictionary line-by-line and adds words to hashmap
+		while (fgets(line, sizeof(line), file))
+		{
+			// fgets adds line ends, so we set lenght - 1 to 0x00
+			int lenght = strlen(line) - 1;
+			line[lenght] = 0;
 
-            position = ftell(file);
-        }
+			// if cant add a line to the dictionary then free resources and return false
+			if (!add(line, lenght))
+			{
+				// free resources
+				fclose(file);
+				unload();
 
-        fclose(file);
+				return false;
+			}
+		}
 
-        return true;
-    } else {
-        // can't open file
-        return false;
-    }
+		fclose(file);
+
+		return true;
+	}
+	else
+	{
+		// can't open file
+		return false;
+	}
 }
 
 // Returns number of words in dictionary if loaded else 0 if not yet loaded
 unsigned int size(void)
 {
-    return count;
+	return table->count;
 }
 
 // Unloads dictionary from memory, returning true if successful else false
 bool unload(void)
 {
-    for(int i = 0; i < N; i++)
-    {
-        if(table[i] != NULL)
-        {
-            free(table[i]);
-        }
-    }
+	free(table->elements);
+	free(table);
 
-    printf("COLLISIONS %d", collisions);
-
-    return true;
+	return true;
 }
