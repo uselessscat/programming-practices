@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
-//#include <strings.h>
 #include <string.h>
 #include <time.h>
 #include <ctype.h>
@@ -53,8 +52,14 @@ node* createNode(const char* word, node* parent)
 {
     node* newNode = (node*)malloc(sizeof(node));
 
-    newNode->next = NULL;
-    strcpy(newNode->word, word);
+    if (newNode != NULL) {
+        newNode->next = NULL;
+
+        strcpy(newNode->word, word);
+    }
+    else {
+        return NULL;
+    }
 
     if (parent != NULL)
     {
@@ -71,7 +76,7 @@ node* searchLinkedList(node* nod, const char* word, bool create)
 
     while (actual != NULL)
     {
-        if (strcasecmp(actual->word, word) == 0)
+        if (stricmp(actual->word, word) == 0)
         {
             return actual;
         }
@@ -271,7 +276,7 @@ unsigned int size(void)
 // Unloads dictionary from memory, returning true if successful else false
 bool unload(void)
 {
-    for (int i = 0; i < N; i++)
+    for (unsigned int i = 0; i < N; i++)
     {
         if (table[i] != NULL)
         {
