@@ -100,7 +100,7 @@ node* searchLinkedList(node* nod, unsigned int hashval, char* word, unsigned int
 
     while (actual != NULL)
     {
-        if (actual->length == len && actual->hash == hashval && strcmp(actual->word, word) == 0)
+        if (actual->hash == hashval && actual->length == len && strcmp(actual->word, word) == 0)
         {
             return actual;
         }
