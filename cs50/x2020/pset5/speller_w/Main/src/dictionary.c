@@ -26,12 +26,15 @@ node* table[150000];
 unsigned int elements = 0;
 unsigned int seed = 0;
 
-void strtolow(char* origin, char* destiny)
+void strtolow(const char* origin, char* destiny)
 {
-    for (int i = 0; origin[i]; i++)
+    int i = 0;
+    for (i = 0; origin[i]; i++)
     {
         destiny[i] = tolower(origin[i]);
     }
+
+    destiny[i] = 0;
 }
 
 unsigned int generateSeed()
@@ -76,7 +79,7 @@ node* searchLinkedList(node* nod, const char* word, bool create)
 
     while (actual != NULL)
     {
-        if (stricmp(actual->word, word) == 0)
+        if (strcmp(actual->word, word) == 0)
         {
             return actual;
         }
@@ -110,11 +113,14 @@ node* searchLinkedList(node* nod, const char* word, bool create)
 // Returns true if word is in dictionary else false
 bool check(const char* word)
 {
-    unsigned int hashval = hash(word) % N;
+    const char lword[LENGTH + 1];
+    strtolow(word, lword);
+
+    unsigned int hashval = hash(lword) % N;
 
     node* actual = table[hashval];
 
-    node* item = searchLinkedList(actual, word, false);
+    node* item = searchLinkedList(actual, lword, false);
 
     if (item == NULL)
     {
@@ -236,7 +242,8 @@ bool load(const char* dictionary)
             return false;
         }
 
-        char line[LENGTH + 1];
+        // plus \0 and fgets \n
+        char line[LENGTH + 2];
 
         // read the dictionary line-by-line and adds words to hashmap
         while (fgets(line, sizeof(line), file))
@@ -278,9 +285,13 @@ bool unload(void)
 {
     for (unsigned int i = 0; i < N; i++)
     {
-        if (table[i] != NULL)
-        {
-            free(table[i]);
+        node* actual = table[i];
+
+        while (actual != NULL) {
+            node* next = actual->next;
+
+            free(actual);
+            actual = next;
         }
     }
 
