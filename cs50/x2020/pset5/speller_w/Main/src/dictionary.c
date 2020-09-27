@@ -14,11 +14,11 @@ unsigned int hash_internal(const char* data, unsigned int length);
 // Represents a node in a hash table
 typedef struct node
 {
-    unsigned int length;
     unsigned int hash;
-    char* word;
+    unsigned int length;
 
     struct node* next;
+    char* word;
 }
 node;
 
@@ -35,8 +35,8 @@ char* mdictionary = NULL;
 
 unsigned int strtolow(const char* origin, char* destiny)
 {
-    int i = 0;
-    for (i = 0; origin[i]; i++)
+    unsigned int i = 0;
+    for (; origin[i]; i++)
     {
         destiny[i] = tolower(origin[i]);
     }
@@ -74,16 +74,12 @@ node* createNode(char* word, unsigned int length, unsigned int hash, node* paren
 {
     node* newNode = (node*)malloc(sizeof(node));
 
-    if (newNode != NULL) {
-        newNode->next = NULL;
+    if (newNode == NULL) return NULL;
 
-        newNode->length = length;
-        newNode->word = word;
-        newNode->hash = hash;
-    }
-    else {
-        return NULL;
-    }
+    newNode->next = NULL;
+    newNode->length = length;
+    newNode->word = word;
+    newNode->hash = hash;
 
     if (parent != NULL)
     {
@@ -100,7 +96,7 @@ node* searchLinkedList(node* nod, unsigned int hashval, char* word, unsigned int
 
     while (actual != NULL)
     {
-        if (actual->hash == hashval && actual->length == len && strcmp(actual->word, word) == 0)
+        if (actual->hash == hashval && actual->length == len) // && strcmp(actual->word, word) == 0)
         {
             return actual;
         }
@@ -163,9 +159,8 @@ bool check(const char* word)
     unsigned int len = strtolow(word, lword);
 
     unsigned int hashval = hash_internal(lword, len);
-    unsigned int chash = hashval % N;
 
-    node* actual = table[chash];
+    node* actual = table[hashval % N];
 
     node* item = searchLinkedList(actual, hashval, lword, len, false);
 
