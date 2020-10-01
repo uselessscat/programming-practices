@@ -12,6 +12,7 @@ push = require 'push'
 require 'Animation'
 require 'Map'
 require 'Player'
+require 'Flag'
 
 -- close resolution to NES but 16:9
 VIRTUAL_WIDTH = 432

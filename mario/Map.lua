@@ -26,6 +26,12 @@ MUSHROOM_BOTTOM = 11
 JUMP_BLOCK = 5
 JUMP_BLOCK_HIT = 9
 
+FLAG_TOP = 8
+FLAG_MIDDLE = 12
+FLAG_BOTTOM = 16
+
+local END_WIDTH = 40
+
 -- a speed to multiply delta time to scroll map; smooth value
 local SCROLL_SPEED = 62
 
@@ -38,7 +44,7 @@ function Map:init()
 
     self.tileWidth = 16
     self.tileHeight = 16
-    self.mapWidth = 30
+    self.mapWidth = 100
     self.mapHeight = 28
     self.tiles = {}
 
@@ -47,6 +53,7 @@ function Map:init()
 
     -- associate player with map
     self.player = Player(self)
+    self.flag = Flag(self)
 
     -- camera offsets
     self.camX = 0
@@ -67,7 +74,7 @@ function Map:init()
 
     -- begin generating the terrain using vertical scan lines
     local x = 1
-    while x < self.mapWidth do
+    while x < self.mapWidth - END_WIDTH do
         
         -- 2% chance to generate a cloud
         -- make sure we're 2 tiles from edge at least
@@ -134,9 +141,31 @@ function Map:init()
         end
     end
 
+    self:generateEnd()
+
     -- start the background music
     self.music:setLooping(true)
     self.music:play()
+end
+
+function Map:generateEnd()
+    local baseY = self.mapHeight / 2
+
+    for i = 0, END_WIDTH - 1 do
+        local x = self.mapWidth - END_WIDTH + i
+
+        for y = baseY, self.mapHeight do
+            self:setTile(x, y, TILE_BRICK)
+        end
+    end
+
+    for i = 0, 9 do
+        local x = self.mapWidth - END_WIDTH + i
+
+        for y = 0, i do
+            self:setTile(x, baseY - 1 - y, TILE_BRICK)
+        end
+    end
 end
 
 -- return whether a given tile is collidable
@@ -160,11 +189,14 @@ end
 -- function to update camera offset with delta time
 function Map:update(dt)
     self.player:update(dt)
+    self.flag:update(dt)
     
     -- keep camera's X coordinate following the player, preventing camera from
     -- scrolling past 0 to the left and the map's width
-    self.camX = math.max(0, math.min(self.player.x - VIRTUAL_WIDTH / 2,
-        math.min(self.mapWidthPixels - VIRTUAL_WIDTH, self.player.x)))
+    self.camX = self.player.x - VIRTUAL_WIDTH / 2
+    self.camY = self.player.y - VIRTUAL_HEIGHT / 2
+        -- math.max(0, math.min(self.player.x - VIRTUAL_WIDTH / 2,
+        -- math.min(self.mapWidthPixels - VIRTUAL_WIDTH, self.player.x)))
 end
 
 -- gets the tile type at a given pixel coordinate
@@ -199,4 +231,5 @@ function Map:render()
     end
 
     self.player:render()
+    self.flag:render()
 end

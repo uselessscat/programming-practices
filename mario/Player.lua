@@ -29,9 +29,6 @@ function Player:init(map)
         ['coin'] = love.audio.newSource('sounds/coin.wav', 'static')
     }
 
-    -- animation frames
-    self.frames = {}
-
     -- current animation frame
     self.currentFrame = nil
 
@@ -46,8 +43,7 @@ function Player:init(map)
     self.dy = 0
 
     -- position on top of map tiles
-    self.y = map.tileHeight * ((map.mapHeight - 2) / 2) - self.height
-    self.x = map.tileWidth * 10
+    self:setStartPosition()
 
     -- initialize all player animations
     self.animations = {
@@ -174,6 +170,11 @@ function Player:init(map)
     }
 end
 
+function Player:setStartPosition()
+    self.y = self.map.tileHeight * ((self.map.mapHeight - 2) / 2) - self.height
+    self.x = self.map.tileWidth * 10
+end
+
 function Player:update(dt)
     self.behaviors[self.state](dt)
     self.animation:update(dt)
@@ -183,7 +184,13 @@ function Player:update(dt)
     self:calculateJumps()
 
     -- apply velocity
-    self.y = self.y + self.dy * dtzz
+    self.y = self.y + self.dy * dt
+
+    if self.y + self.height > self.map.mapHeightPixels then
+        self.dx = 0
+        self.dy = 0
+        self:setStartPosition()
+    end
 end
 
 -- jumping and block hitting logic
