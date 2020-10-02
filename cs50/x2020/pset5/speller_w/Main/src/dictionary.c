@@ -35,10 +35,16 @@ char* mdictionary = NULL;
 
 unsigned int strtolow(const char* origin, char* destiny)
 {
-    unsigned int i = 0;
-    for (; origin[i]; i++)
+    register char ch;
+    register int i = 0;
+    while ((ch = origin[i]))
     {
-        destiny[i] = tolower(origin[i]);
+        if (ch >= 'A' && ch <= 'Z')
+            destiny[i] = ('a' + ch - 'A');
+        else
+            destiny[i] = ch;
+
+        i++;
     }
 
     destiny[i] = 0;

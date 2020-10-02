@@ -9,11 +9,16 @@
 
 #include "dictionary.h"
 
+unsigned int hash_internal(const char *data, unsigned int length);
+
 // Represents a node in a hash table
 typedef struct node
 {
-    char word[LENGTH + 1];
-    struct node* next;
+    unsigned int hash;
+    unsigned int length;
+
+    struct node *next;
+    char *word;
 }
 node;
 
@@ -21,20 +26,45 @@ node;
 const unsigned int N = 150000;
 
 // Hash table
-node* table[150000];
+node *table[150000];
 
 unsigned int elements = 0;
 unsigned int seed = 0;
 
-void strtolow(const char* origin, char* destiny)
+char *mdictionary = NULL;
+
+unsigned int strtolow(const char *origin, char *destiny)
 {
-    int i = 0;
-    for (i = 0; origin[i]; i++)
+    register char ch;
+    register int i = 0;
+    while ((ch = origin[i]))
     {
-        destiny[i] = tolower(origin[i]);
+        if (ch >= 'A' && ch <= 'Z')
+        {
+            destiny[i] = ('a' + ch - 'A');
+        }
+        else
+        {
+            destiny[i] = ch;
+        }
+
+        i++;
     }
 
     destiny[i] = 0;
+    return i;
+}
+
+long filesize(FILE *file)
+{
+    long oldpos = ftell(file);
+
+    fseek(file, 0L, SEEK_END);
+    long size = ftell(file);
+
+    fseek(file, 0L, oldpos);
+
+    return size;
 }
 
 unsigned int generateSeed()
@@ -51,18 +81,19 @@ bool initHashTable(unsigned int initialCapacity)
     return true;
 }
 
-node* createNode(const char* word, node* parent)
+node *createNode(char *word, unsigned int length, unsigned int hash, node *parent)
 {
-    node* newNode = (node*)malloc(sizeof(node));
+    node *newNode = (node *)malloc(sizeof(node));
 
-    if (newNode != NULL) {
-        newNode->next = NULL;
-
-        strcpy(newNode->word, word);
-    }
-    else {
+    if (newNode == NULL)
+    {
         return NULL;
     }
+
+    newNode->next = NULL;
+    newNode->length = length;
+    newNode->word = word;
+    newNode->hash = hash;
 
     if (parent != NULL)
     {
@@ -73,13 +104,13 @@ node* createNode(const char* word, node* parent)
 }
 
 // return the node that contains the word, or allocates one
-node* searchLinkedList(node* nod, const char* word, bool create)
+node *searchLinkedList(node *nod, unsigned int hashval, char *word, unsigned int len, bool create)
 {
-    node* actual = nod;
+    node *actual = nod;
 
     while (actual != NULL)
     {
-        if (strcmp(actual->word, word) == 0)
+        if (actual->hash == hashval && actual->length == len) // && strcmp(actual->word, word) == 0)
         {
             return actual;
         }
@@ -87,7 +118,7 @@ node* searchLinkedList(node* nod, const char* word, bool create)
         {
             if (create)
             {
-                return createNode(word, actual);
+                return createNode(word, len, hashval, actual);
             }
             else
             {
@@ -102,7 +133,7 @@ node* searchLinkedList(node* nod, const char* word, bool create)
 
     if (create)
     {
-        return createNode(word, NULL);
+        return createNode(word, len, hashval, NULL);
     }
     else
     {
@@ -110,17 +141,51 @@ node* searchLinkedList(node* nod, const char* word, bool create)
     }
 }
 
+long readfile(const char *filename, char **buffer)
+{
+    // open file then copy to memory
+    FILE *file = fopen(filename, "rb");
+
+    if (file == NULL)
+    {
+        return 0;
+    }
+
+    unsigned long size = filesize(file);
+
+    if (size < 1)
+    {
+        return 0;
+    }
+
+    *buffer = (char *)malloc(size);
+
+    if (*buffer == NULL)
+    {
+        fclose(file);
+
+        return 0;
+    }
+    else
+    {
+        fread(*buffer, sizeof(char), size, file);
+
+        fclose(file);
+        return size;
+    }
+}
+
 // Returns true if word is in dictionary else false
-bool check(const char* word)
+bool check(const char *word)
 {
     char lword[LENGTH + 1];
-    strtolow(word, lword);
+    unsigned int len = strtolow(word, lword);
 
-    unsigned int hashval = hash(lword) % N;
+    unsigned int hashval = hash_internal(lword, len);
 
-    node* actual = table[hashval];
+    node *actual = table[hashval % N];
 
-    node* item = searchLinkedList(actual, lword, false);
+    node *item = searchLinkedList(actual, hashval, lword, len, false);
 
     if (item == NULL)
     {
@@ -137,13 +202,17 @@ static inline unsigned int rotl32(unsigned int x, unsigned char r)
     return (x << r) | (x >> (32 - r));
 }
 
-unsigned int hash(const char* data)
+unsigned int hash(const char *data)
+{
+    return hash_internal(data, strlen(data));
+}
+
+unsigned int hash_internal(const char *data, unsigned int length)
 {
     // https://softwareengineering.stackexchange.com/a/145633/258205
     // I'm using MurmurHash 3 from https://github.com/aappleby/smhasher/blob/master/src/MurmurHash3.cpp#L94
 
-    unsigned int len = strlen(data);
-    int nblocks = len / 4;
+    int nblocks = length / 4;
 
     unsigned int h1 = seed;
 
@@ -152,7 +221,7 @@ unsigned int hash(const char* data)
 
     // body
     // point to the end 4 bytes block
-    unsigned int* blocks = (unsigned int*)(data + nblocks * 4);
+    unsigned int *blocks = (unsigned int *)(data + nblocks * 4);
 
     // iterate from first block using negative indexes
     for (int i = -nblocks; i; i++)
@@ -169,26 +238,26 @@ unsigned int hash(const char* data)
     }
 
     // tail
-    unsigned char* tail = (unsigned char*)(data + nblocks * 4);
+    unsigned char *tail = (unsigned char *)(data + nblocks * 4);
 
     unsigned int k1 = 0;
 
-    switch (len & 3)
+    switch (length & 3)
     {
-    case 3:
-        k1 ^= tail[2] << 16;
-    case 2:
-        k1 ^= tail[1] << 8;
-    case 1:
-        k1 ^= tail[0];
-        k1 *= c1;
-        k1 = rotl32(k1, 15);
-        k1 *= c2;
-        h1 ^= k1;
+        case 3:
+            k1 ^= tail[2] << 16;
+        case 2:
+            k1 ^= tail[1] << 8;
+        case 1:
+            k1 ^= tail[0];
+            k1 *= c1;
+            k1 = rotl32(k1, 15);
+            k1 *= c2;
+            h1 ^= k1;
     };
 
     // finalization
-    h1 ^= len;
+    h1 ^= length;
 
     h1 ^= h1 >> 16;
     h1 *= 0x85ebca6b;
@@ -199,21 +268,22 @@ unsigned int hash(const char* data)
     return h1;
 }
 
-bool add(const char* word, int lenght)
+bool add(char *word, int length)
 {
     // dictionary always are lower haha
     //const char* lword[LENGTH + 1];
     //strtolow(word, lword);
 
-    unsigned int hashval = hash(word) % N;
+    unsigned int hashval = hash_internal(word, length);
+    unsigned int chash = hashval % N;
 
-    node* actual = table[hashval];
+    node *actual = table[chash];
 
-    node* location = searchLinkedList(actual, word, true);
+    node *location = searchLinkedList(actual, hashval, word, length, true);
 
     if (actual == NULL)
     {
-        table[hashval] = location;
+        table[chash] = location;
     }
 
     if (location != NULL)
@@ -228,49 +298,43 @@ bool add(const char* word, int lenght)
 }
 
 // Loads dictionary into memory, returning true if successful else false
-bool load(const char* dictionary)
+bool load(const char *dictionary)
 {
-    FILE* file = fopen(dictionary, "r");
+    int size = readfile(dictionary, &mdictionary);
 
-    if (file != NULL)
+    if (!initHashTable(N))
     {
-        if (!initHashTable(N))
+        //unload();
+
+        return false;
+    }
+
+    // read the dictionary line-by-line and adds words to hashmap
+    int lastLetterIndex = 0;
+    // conver to index
+    int i = size - 1;
+
+    while (i > 0)
+    {
+        lastLetterIndex = i;
+        mdictionary[lastLetterIndex] = 0;
+
+        // assume that every word in dictionary ends with \n
+        i--;
+        while (i-- && mdictionary[i] != '\n');
+
+        register int ti = i + 1;
+        register int len = lastLetterIndex - ti;
+        if (!add(&mdictionary[ti], len))
         {
-            fclose(file);
+            // free resources
             unload();
 
             return false;
         }
-
-        char line[LENGTH + 2];
-
-        // read the dictionary line-by-line and adds words to hashmap
-        while (fgets(line, sizeof(line), file))
-        {
-            // fgets adds line ends, so we set lenght - 1 to 0x00
-            int lenght = strlen(line) - 1;
-            line[lenght] = 0;
-            //  I don't use fgets at all. In one way I would use fread once and be done reading in the file. Or just mmap once and be done with that.
-            // if cant add a line to the dictionary then free resources and return false
-            if (!add(line, lenght))
-            {
-                // free resources
-                fclose(file);
-                unload();
-
-                return false;
-            }
-        }
-
-        fclose(file);
-
-        return true;
     }
-    else
-    {
-        // can't open file
-        return false;
-    }
+
+    return true;
 }
 
 // Returns number of words in dictionary if loaded else 0 if not yet loaded
@@ -284,15 +348,18 @@ bool unload(void)
 {
     for (unsigned int i = 0; i < N; i++)
     {
-        node* actual = table[i];
+        node *actual = table[i];
 
-        while (actual != NULL) {
-            node* next = actual->next;
+        while (actual != NULL)
+        {
+            node *next = actual->next;
 
             free(actual);
             actual = next;
         }
     }
+
+    free(mdictionary);
 
     return true;
 }
