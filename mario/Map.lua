@@ -53,7 +53,6 @@ function Map:init()
 
     -- associate player with map
     self.player = Player(self)
-    self.flag = Flag(self)
 
     -- camera offsets
     self.camX = 0
@@ -149,10 +148,11 @@ function Map:init()
 end
 
 function Map:generateEnd()
+    local baseX = self.mapWidth - END_WIDTH
     local baseY = self.mapHeight / 2
 
-    for i = 0, END_WIDTH - 1 do
-        local x = self.mapWidth - END_WIDTH + i
+    for i = 0, END_WIDTH do
+        local x = baseX + i
 
         for y = baseY, self.mapHeight do
             self:setTile(x, y, TILE_BRICK)
@@ -160,12 +160,24 @@ function Map:generateEnd()
     end
 
     for i = 0, 9 do
-        local x = self.mapWidth - END_WIDTH + i
+        local x = baseX + i
 
         for y = 0, i do
             self:setTile(x, baseY - 1 - y, TILE_BRICK)
         end
     end
+
+    for i = 0, 5 do
+        self:setTile(baseX + 15, baseY - 2 - i, FLAG_MIDDLE)
+    end
+
+    self:setTile(baseX + 15, baseY - 1 - 7, FLAG_TOP)
+    self:setTile(baseX + 15, baseY - 1, FLAG_BOTTOM)
+
+    self.flag = Flag(self)
+
+    self.flag.x = (baseX + 14) * self.tileWidth + self.flag.xOffset
+    self.flag.y = (baseY - 9) * self.tileHeight + self.flag.yOffset
 end
 
 -- return whether a given tile is collidable
@@ -193,10 +205,12 @@ function Map:update(dt)
     
     -- keep camera's X coordinate following the player, preventing camera from
     -- scrolling past 0 to the left and the map's width
-    self.camX = self.player.x - VIRTUAL_WIDTH / 2
-    self.camY = self.player.y - VIRTUAL_HEIGHT / 2
-        -- math.max(0, math.min(self.player.x - VIRTUAL_WIDTH / 2,
-        -- math.min(self.mapWidthPixels - VIRTUAL_WIDTH, self.player.x)))
+    self.camX = math.max(0,
+        math.min(self.player.x - VIRTUAL_WIDTH / 2, -- self.player.x - VIRTUAL_WIDTH / 2
+            math.min(self.mapWidthPixels - VIRTUAL_WIDTH, self.player.x)
+        )
+    )
+    --self.camY = self.player.y - VIRTUAL_HEIGHT / 2
 end
 
 -- gets the tile type at a given pixel coordinate

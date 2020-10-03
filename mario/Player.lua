@@ -56,10 +56,8 @@ function Player:init(map)
         ['walking'] = Animation({
             texture = self.texture,
             frames = {
-                love.graphics.newQuad(128, 0, 16, 20, self.texture:getDimensions()),
-                love.graphics.newQuad(144, 0, 16, 20, self.texture:getDimensions()),
-                love.graphics.newQuad(160, 0, 16, 20, self.texture:getDimensions()),
-                love.graphics.newQuad(144, 0, 16, 20, self.texture:getDimensions()),
+                love.graphics.newQuad(16 * 9, 0, 16, 20, self.texture:getDimensions()),
+                love.graphics.newQuad(16 * 10, 0, 16, 20, self.texture:getDimensions()),
             },
             interval = 0.15
         }),

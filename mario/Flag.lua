@@ -5,8 +5,11 @@
 Flag = Class{}
 
 function Flag:init(map)
+    self.xOffset = 11
+    self.yOffset = 6
+
     self.x = 0
-    self.y = 100
+    self.y = 0
     self.width = 16
     self.height = 16
 
@@ -23,11 +26,12 @@ function Flag:init(map)
         ['idle'] = Animation({
             texture = self.map.spritesheet,
             frames = {
-                love.graphics.newQuad(16, 0, 16, 20, self.map.spritesheet:getDimensions()),
-                love.graphics.newQuad(0, 0, 16, 20, self.map.spritesheet:getDimensions())
+                self.map.sprites[13],
+                self.map.sprites[14],
             },
             interval = 0.25
         }),
+        
         ['used'] = Animation({
             texture = self.map.spritesheet,
             frames = {
@@ -42,10 +46,8 @@ function Flag:init(map)
 end
 
 function Flag:update(dt)
-    
     self.animation:update(dt)
     self.currentFrame = self.animation:getCurrentFrame()
-    print(self.currentFrame)
 end
 
 function Flag:render()
