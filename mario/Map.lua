@@ -37,6 +37,7 @@ local SCROLL_SPEED = 62
 
 -- constructor for our map object
 function Map:init()
+    self.state = 'playing'
 
     self.spritesheet = love.graphics.newImage('graphics/spritesheet.png')
     self.sprites = generateQuads(self.spritesheet, 16, 16)
@@ -185,14 +186,20 @@ function Map:collides(tile)
     -- define our collidable tiles
     local collidables = {
         TILE_BRICK, JUMP_BLOCK, JUMP_BLOCK_HIT,
-        MUSHROOM_TOP, MUSHROOM_BOTTOM
+        MUSHROOM_TOP, MUSHROOM_BOTTOM, FLAG_BOTTOM, FLAG_MIDDLE, FLAG_TOP
     }
 
     -- iterate and return true if our tile type matches
     for _, v in ipairs(collidables) do
+        if tile.id == FLAG_TOP or tile.id == FLAG_MIDDLE or tile.id == FLAG_TOP then
+            self.state = 'win'
+            return true
+        end
+
         if tile.id == v then
             return true
         end
+
     end
 
     return false
@@ -200,17 +207,20 @@ end
 
 -- function to update camera offset with delta time
 function Map:update(dt)
-    self.player:update(dt)
     self.flag:update(dt)
-    
-    -- keep camera's X coordinate following the player, preventing camera from
-    -- scrolling past 0 to the left and the map's width
-    self.camX = math.max(0,
-        math.min(self.player.x - VIRTUAL_WIDTH / 2, -- self.player.x - VIRTUAL_WIDTH / 2
-            math.min(self.mapWidthPixels - VIRTUAL_WIDTH, self.player.x)
+
+    if self.state == 'playing' then
+        self.player:update(dt)
+        
+        -- keep camera's X coordinate following the player, preventing camera from
+        -- scrolling past 0 to the left and the map's width
+        self.camX = math.max(0,
+            math.min(self.player.x - VIRTUAL_WIDTH / 2, -- self.player.x - VIRTUAL_WIDTH / 2
+                math.min(self.mapWidthPixels - VIRTUAL_WIDTH, self.player.x)
+            )
         )
-    )
-    --self.camY = self.player.y - VIRTUAL_HEIGHT / 2
+        --self.camY = self.player.y - VIRTUAL_HEIGHT / 2
+    end
 end
 
 -- gets the tile type at a given pixel coordinate
@@ -246,4 +256,20 @@ function Map:render()
 
     self.player:render()
     self.flag:render()
+    
+    if self.state == 'win' then
+        local oldColor = {love.graphics.getColor()}
+
+        local text = "YOU WIN"
+        local size = love.graphics.getFont():getWidth(text)
+
+        love.graphics.setColor(0.0, 0.0, 0.0, 1.0)
+        love.graphics.printf(text,
+            self.camX + VIRTUAL_WIDTH / 2 - size / 2, 
+            self.camY + VIRTUAL_HEIGHT / 2 - 16, 
+            size, 
+            'center')
+
+        love.graphics.setColor(unpack(oldColor))
+    end
 end
