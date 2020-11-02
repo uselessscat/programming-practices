@@ -1,6 +1,6 @@
-# https://www.hackerrank.com/challenges/sock-merchant/problem
-
 #!/bin/python3
+
+# https://www.hackerrank.com/challenges/sock-merchant/problem
 
 import math
 import os
