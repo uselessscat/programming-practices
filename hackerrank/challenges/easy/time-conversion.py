@@ -1,6 +1,6 @@
 #!/bin/python3
 
-# https://www.hackerrank.com/challenges/one-week-preparation-kit-time-conversion/problem
+# https://www.hackerrank.com/challenges/time-conversion/problem
 
 import math
 import os
