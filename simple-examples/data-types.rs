@@ -65,6 +65,7 @@ fn main() {
 
     println!("name {}", person1.name);
 
+    // struct update syntax
     let person2 = Person {
         name: String::from("Peter"),
         ..person1
