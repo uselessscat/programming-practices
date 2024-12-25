@@ -1,0 +1,121 @@
+<head>
+
+</head>
+
+<body>
+    <canvas id="myCanvas" width="500px" height="500px" style="border:1px solid #000000;"></canvas>
+
+    <script>
+        class Scene {
+            // datos de tiempo en milisegundos
+            timing = {
+                sceneCreationTime: 0,
+                targetInterval: 1,
+                deltaTime: 0,
+                lastTime: 0
+            }
+
+            // contexto 2d del canvas
+            sceneObjects = [];
+            sceneProperties = {
+                canvas: undefined,
+                context: undefined,
+            }
+
+            constructor({ canvasId, interval }) {
+                this.timing.sceneCreationTime = Date.now();
+                this.timing.targetInterval = interval || 1;
+
+                this.sceneProperties.canvas = document.getElementById(canvasId);
+                this.sceneProperties.context = this.sceneProperties.canvas.getContext("2d");
+            }
+
+            get context(){
+                return this.sceneProperties.context;
+            }
+
+            get deltaTime(){
+                return this.timing.deltaTime;
+            }
+
+            set deltaTime(deltaTime){
+                this.timing.deltaTime = deltaTime;
+            }
+
+            addObject(object) {
+                object.parentScene = this;
+                this.sceneObjects.push(object);
+
+                return this;
+            }
+
+            start() {
+                this.timing.lastTime = Date.now();
+                var updateDelta = () => {
+                    var now = Date.now();
+                    this.deltaTime = now - this.timing.lastTime;
+                    this.timing.lastTime = now;
+                }
+
+                setInterval(() => {
+                    updateDelta();
+
+                    this.context.clearRect(0, 0, this.sceneProperties.canvas.width, this.sceneProperties.canvas.height);
+
+                    this.sceneObjects.forEach(object => {
+                        object.update(this.deltaTime);
+                        object.draw(this.context);
+                    });
+                }, this.sceneProperties.targetInterval);
+            }
+        }
+
+        class Ball {
+            parentScene;
+
+            constructor({ x = 0, y = 0, sx = 0, sy = 0 }) {
+                this.radio = 10;
+
+                this.position = {
+                    x,
+                    y
+                };
+
+                this.speed = { // px/s
+                    x: sx,
+                    y: sy
+                };
+            }
+
+            draw(context) {
+                context.beginPath();
+                context.arc(this.position.x, this.position.y, this.radio, 0, 2 * Math.PI);
+                context.stroke();
+
+                context.fillText(this.parentScene.deltaTime, this.position.x, this.position.y);
+            }
+
+            update(deltaTime) {
+                this.position.x += (this.speed.x * deltaTime) / 1000;
+                this.position.y += (this.speed.y * deltaTime) / 1000;
+            }
+        }
+
+        var ball = new Ball({ y: 60, sx: 10, sy: 30 });
+        var ball1 = new Ball({ y: 90, sx: 40, sy: 10 });
+        var ball2 = new Ball({ y: 0, sx: 10, sy: 20 });
+        var ball3 = new Ball({ y: 10, sx: 60, sy: 20 });
+        var ball4 = new Ball({ y: 20, sx: 14, sy: 50 });
+        var ball5 = new Ball({ y: 30, sx: 20, sy: 60 });
+
+
+        var scene = new Scene({ canvasId: "myCanvas", interval: 1 });
+        scene.addObject(ball)
+            .addObject(ball1)
+            .addObject(ball2)
+            .addObject(ball3)
+            .addObject(ball4)
+            .addObject(ball5)
+            .start();
+    </script>
+</body>
