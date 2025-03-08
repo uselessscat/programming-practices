@@ -1,0 +1,12 @@
+.exs
+.asm
+.c
+.dart
+.ex
+.h
+.html
+.java
+.js
+.lua
+.py
+.rs
