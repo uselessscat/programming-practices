@@ -112,6 +112,7 @@ class CodeLineCounter:
             ids="id",
             title="Code Lines Treemap",
             branchvalues="total",
+            maxdepth=4,
         )
         fig.update_layout(margin=dict(t=50, l=25, r=25, b=25))
         fig.write_image("treemap.svg", width=1024)
